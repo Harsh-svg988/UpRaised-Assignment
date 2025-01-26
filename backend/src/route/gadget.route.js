@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.use(protectRoute);
+// router.use(protectRoute);
 /**
  * @swagger
  * components:
