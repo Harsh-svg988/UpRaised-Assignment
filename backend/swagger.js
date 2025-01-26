@@ -21,6 +21,11 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsDoc(swaggerOptions);
 
 export const setupSwaggerDocs = (app, port) => {
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-  console.log(`Swagger Docs available at http://localhost:${port}/api-docs`);
+  // Check if the environment is production
+  if (process.env.NODE_ENV === "production") {
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    console.log(`Swagger Docs available at https://upraised-assignment.onrender.com/api-docs`);
+  } else {
+    console.log(`Swagger Docs are disabled in the development environment.`);
+  }
 };
