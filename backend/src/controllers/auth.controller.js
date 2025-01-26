@@ -1,0 +1,121 @@
+import { generateToken } from "../lib/utils.js";
+import User from "../models/user.model.js";
+import bcrypt from "bcryptjs"
+
+import { Op } from "sequelize"; // Import Op for case-insensitive query
+
+export const signup = async (req, res) => {
+    const {name, email, password } = req.body;
+    try {
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "Some fields are missing" });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ message: "Minimum 6 letters" });
+        }
+
+        // Normalize the email (convert to lowercase)
+        const normalizedEmail = email.toLowerCase();
+
+        const user = await User.findOne({
+            where: {
+                email: {
+                    [Op.iLike]: normalizedEmail // Case-insensitive search
+                }
+            }
+        });
+
+        console.log("Received email:", email);  // Log the received email
+
+        if (user) {
+            return res.status(400).json({ message: "Email already exists" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = new User({
+            name:name,
+            email: normalizedEmail,  // Store email in lowercase
+            password: hashedPassword
+        });
+
+        if (newUser) {
+            // Generate JWT token
+            generateToken(newUser.id, res);
+            await newUser.save();
+
+            res.status(201).json({
+                _id: newUser.id,
+                name: newUser.name,
+                email: newUser.email,
+            });
+        } else {
+            res.status(400).json({ message: "Invalid user data" });
+        }
+
+    } catch (err) {
+        console.log("Error in signup controller ", err.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+
+export const login = async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const user = await User.findOne({
+            where: {
+                email: {
+                    [Op.iLike]: email.toLowerCase() // Case-insensitive search
+                }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordCorrect) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        generateToken(user.id, res);
+
+        res.status(200).json({
+            _id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            profilePic: user.profilePic
+        });
+
+    } catch (error) {
+        console.log("Error in login controller ", error.message);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+
+export const logout = (req,res)=>{
+    try {
+        res.cookie("jwt","", {maxAge:0});
+        res.status(200).json({message: "Logout successful"})
+    } catch (error) {
+        console.log("Error in logout controller ", error.message);
+        res.status(500).json({message: "Internal server error"})
+    }
+}
+
+
+export const checkAuth = (req, res)=>{
+    try {
+        res.status(200).json(req.user);
+    } catch (error) {
+        console.log("Error in checkAuth controller ", error.message);
+        res.status(500).json({message: "Internal server error"})
+    }
+}
