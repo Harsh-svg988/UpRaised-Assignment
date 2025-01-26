@@ -1,5 +1,5 @@
 import Gadget from "../models/gadget.model.js";
-
+import {validStatuses} from "../lib/utils.js"
 // List of cool spy gadget codenames
 const codenameList = [
     'The Nightingale', 
@@ -11,7 +11,8 @@ const codenameList = [
     'The Silver Serpent', 
     'The Midnight Falcon', 
     'The Stealth Wolf', 
-    'The Arctic Wolf'
+    'The Arctic Wolf',
+    'The Kraken'
 ];
 
 // Generating codename from the list
@@ -24,14 +25,26 @@ async function generateCodename() {
 export const getAllGadgets = async (req, res) => {
     try {
         const { status } = req.query;
+
+        // Build the where clause for filtering by status (if provided)
         const whereClause = status ? { status } : {};
 
+        // Query the database for gadgets
         const gadgets = await Gadget.findAll({ where: whereClause });
+
+        // Check if gadgets are found
+        if (gadgets.length === 0) {
+            return res.status(404).json({ message: "No gadgets found." });
+        }
+
+        // Return the gadgets if found
         res.status(200).json(gadgets);
     } catch (error) {
+        // Handle server errors
         res.status(500).json({ error: error.message });
     }
 };
+
 
 // Create Gadget
 export const createGadget = async (req, res) => {
@@ -46,7 +59,6 @@ export const createGadget = async (req, res) => {
             status: "Available",
             successRate,
         });
-
         res.status(201).json(gadget);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -57,20 +69,47 @@ export const createGadget = async (req, res) => {
 export const updateGadget = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, status } = req.body;
+        const { name, status, successRate, codeName } = req.body;
 
+
+        
+
+        // Validate status
+        if (status && !validStatuses.includes(status)) {
+            return res.status(400).json({ error: "Invalid status provided" });
+        }
+
+        // Validate codeName
+        if (codeName && !codenameList.includes(codeName)) {
+            return res.status(400).json({ error: "Invalid codeName provided" });
+        }
+
+        // Validate successRate
+        if (successRate && (successRate < 0 || successRate > 100)) {
+            return res.status(400).json({ error: "SuccessRate must be between 0 and 100" });
+        }
+
+        // Find gadget by primary key
         const gadget = await Gadget.findByPk(id);
 
         if (!gadget) {
             return res.status(404).json({ error: "Gadget not found" });
         }
 
-        await gadget.update({ name, status });
-        res.status(200).json(gadget);
+        // Update gadget fields
+        await gadget.update({ name, status, successRate, codeName });
+
+        // Return the updated gadget
+        res.status(200).json({
+            message: "Gadget updated successfully",
+            gadget
+        });
     } catch (error) {
+        console.error("Error in updateGadget: ", error.message);
         res.status(500).json({ error: error.message });
     }
 };
+
 
 // Delete Gadget
 export const decommissionGadget = async (req, res) => {

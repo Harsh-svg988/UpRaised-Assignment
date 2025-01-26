@@ -18,8 +18,8 @@ app.use(cookieParser());
 
 const PORT = process.env.PORT || 5000;
 
-app.use('/api/auth', authRoute);
-app.use('/api/gadget', gadgetRoute);
+app.use('/api/v1/auth', authRoute);
+app.use('/api/v1/gadget', gadgetRoute);
 
 app.listen(PORT, () => {
   initializeDatabase();

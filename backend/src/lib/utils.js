@@ -14,3 +14,4 @@ export const generateToken = (userId, res) =>{
 
     return token;
 }
+export const validStatuses = ["Available", "Deployed", "Destroyed", "Decommissioned"];
